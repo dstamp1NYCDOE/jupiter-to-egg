@@ -13,7 +13,7 @@ def main(data):
     assignments_df = assignments_df[assignments_df['Course']!='']
     
 
-    ## drop assigments worth zero
+    ## drop assignments worth zero
     assignments_df = assignments_df[assignments_df['WorthPoints']!=0]
 
     ## drop assignments not graded yet
@@ -40,8 +40,6 @@ def main(data):
     assignments_df['denominator'] = assignments_df['CategoryWeight'] * \
         assignments_df['WorthPoints']
     
-    assignments_df['impact'] = assignments_df['numerator'] / \
-        assignments_df['denominator']
     
     student_grades_df = assignments_df.groupby(
         ['StudentID', 'Course', 'Section'])[['numerator', 'denominator']].sum()
@@ -87,9 +85,12 @@ def main(data):
     temp_egg_df['ReconciledMark'] = temp_egg_df.apply(
         reconcile_egg_and_jupiter, axis=1)
     
-    print(temp_egg_df)
 
-    temp_egg_df.to_excel('output/egg_output.xlsx')
+    writer = pd.ExcelWriter('output/egg_output.xlsx')
+    temp_egg_df.to_excel(writer, sheet_name='EGG_Output')
+    student_grades_df.to_excel(writer, sheet_name='JupiterComputedMarks')
+
+    writer.close()
 
     return True
 
@@ -142,6 +143,6 @@ def convert_percentages(row):
 
 if __name__ == '__main__':
     data = {
-        'MPs': ['S1-MP1'],
+        'MPs': ['S1-MP1',],
     }
     main(data)
