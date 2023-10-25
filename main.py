@@ -35,18 +35,19 @@ def main(data):
     
     
 
-    assignments_df['numerator'] = assignments_df['CategoryWeight'] * \
-        assignments_df['WorthPoints'] * assignments_df['Percent%']
-    assignments_df['denominator'] = assignments_df['CategoryWeight'] * \
-        assignments_df['WorthPoints']
+    assignments_df['numerator'] = assignments_df['WorthPoints'] * assignments_df['Percent%']
+    assignments_df['denominator'] = assignments_df['WorthPoints']
     
     
     student_grades_df = assignments_df.groupby(
-        ['StudentID', 'Course', 'Section'])[['numerator', 'denominator']].sum()
-    
-    student_grades_df['Mark'] = 100*student_grades_df['numerator'] / \
-        student_grades_df['denominator']
-    student_grades_df['FinalMark'] = student_grades_df['Mark'].apply(convert_final_mark)
+        ['StudentID', 'Course', 'Section','CategoryWeight'])[['numerator', 'denominator']].sum().reset_index()
+    student_grades_df['Category%'] = student_grades_df['numerator'] / student_grades_df['denominator']
+    student_grades_df['weighted%'] = student_grades_df['Category%'] * student_grades_df['CategoryWeight']
+
+    student_grades_df = student_grades_df.groupby(['StudentID','Course','Section'])['weighted%'].sum().reset_index()
+
+
+    student_grades_df['FinalMark'] = student_grades_df['weighted%'].apply(convert_final_mark)
 
     student_grades_df = student_grades_df.reset_index()
     
