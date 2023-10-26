@@ -33,7 +33,25 @@ def main(data):
     ## convert percentages
     assignments_df['Percent%'] = assignments_df.apply(convert_percentages, axis=1)
     
-    
+
+    ## adjusted worth points
+    assignments_group_by_cols = ['Teacher', 'Assignment', 'Course', 'DueDate']
+    assignments_dff = assignments_df.drop_duplicates(
+        subset=assignments_group_by_cols+['Objective'])
+    assignments_dff = assignments_dff.groupby(assignments_group_by_cols)[
+        ['Objective', 'WorthPoints']].agg({'WorthPoints': ['min', 'max','sum'], 'Objective': 'nunique'}).reset_index()
+    reassigned_cols = ['Teacher', 'Assignment', 'Course', 'DueDate',
+                       'WorthPointsMax', 'WorthPointsMin', 'WorthPointsSum', 'ObjectivesCount']
+    assignments_dff.columns = reassigned_cols
+
+    assignments_df = assignments_df.merge(
+        assignments_dff,
+        on=assignments_group_by_cols,
+        how='left'
+    )
+
+    assignments_df['WorthPoints'] = assignments_df.apply(
+        recompute_worth_points, axis=1)
 
     assignments_df['numerator'] = assignments_df['WorthPoints'] * assignments_df['Percent%']
     assignments_df['denominator'] = assignments_df['WorthPoints']
@@ -56,8 +74,6 @@ def main(data):
 
     student_grades_df = student_grades_df[['StudentID', 'JupiterCourse','JupiterSection','FinalMark']]
 
-    print(student_grades_df)
-    
     crossover_df = pd.read_csv('data/jupiter_crossover.csv')
 
     student_grades_df = student_grades_df.merge(
@@ -95,6 +111,20 @@ def main(data):
 
     return True
 
+def recompute_worth_points(row):
+    WorthPoints = row['WorthPoints']
+    WorthPointsMax = row['WorthPointsMax']
+    WorthPointsMin = row['WorthPointsMin']
+    WorthPointsSum = row['WorthPointsSum']
+    ObjectivesCount = row['ObjectivesCount']
+
+    if ObjectivesCount == 0:
+        return WorthPoints
+    if WorthPointsMax == WorthPointsMin:
+        return WorthPoints / ObjectivesCount
+    else:
+        return WorthPoints / WorthPointsSum
+
 def reconcile_egg_and_jupiter(row):
     egg_mark = row['Mark']
     jupiter_mark = row['FinalMark']
@@ -110,7 +140,7 @@ def convert_final_mark(Mark):
             return 45
         if Mark < 65:
             return 55
-        return int(Mark)
+        return round(Mark)
     except:
         return Mark
 
